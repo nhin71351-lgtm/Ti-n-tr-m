@@ -1,0 +1,1628 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tiền Trạm — Cảnh báo sớm rủi ro vận chuyển</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#11151c;
+    --panel:#171c24;
+    --panel-alt:#1d2430;
+    --line:#2a3140;
+    --line-soft:#232a36;
+    --text:#e8ebef;
+    --text-dim:#8d96a6;
+    --text-faint:#586071;
+    --safe:#4fb28a;
+    --safe-dim:#2d4740;
+    --warn:#e8a33d;
+    --warn-dim:#4a3a22;
+    --danger:#e2574c;
+    --danger-dim:#4a2b28;
+    --amber:#e8a33d;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Space Grotesk', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  ::selection{ background:var(--amber); color:#1a1300; }
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+
+  /* ---------- shell ---------- */
+  .shell{ max-width:1360px; margin:0 auto; padding:0 28px 60px; }
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:22px 0 18px;
+    border-bottom:1px solid var(--line);
+  }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand-mark{ position:relative; width:22px; height:22px; flex-shrink:0; }
+  .brand-mark .dot{
+    position:absolute; inset:7px; border-radius:50%; background:var(--amber);
+  }
+  .brand-mark .ring{
+    position:absolute; inset:0; border-radius:50%; border:1px solid var(--amber);
+    opacity:.55; animation:pulseRing 2.6s ease-out infinite;
+  }
+  .brand-mark .ring.r2{ animation-delay:1.3s; }
+  @keyframes pulseRing{
+    0%{ transform:scale(.3); opacity:.7; }
+    100%{ transform:scale(1.6); opacity:0; }
+  }
+  .brand-word{ font-size:19px; font-weight:600; letter-spacing:.2px; }
+  .brand-sub{ font-size:12.5px; color:var(--text-faint); margin-top:1px; }
+
+  .topnav{ display:flex; gap:28px; }
+  .topnav a{
+    font-size:14px; color:var(--text-dim); text-decoration:none;
+    padding:6px 0; border-bottom:2px solid transparent;
+  }
+  .topnav a.active{ color:var(--text); border-color:var(--amber); }
+
+  .clockbox{ text-align:right; }
+  .clockbox .time{ font-size:15px; letter-spacing:.5px; }
+  .clockbox .date{ font-size:12px; color:var(--text-faint); margin-top:2px; }
+  .logout-link{ display:inline-block; margin-top:4px; font-size:12px; color:var(--text-dim); text-decoration:none; }
+  .logout-link:hover{ color:var(--amber); text-decoration:underline; }
+
+  /* ---------- KPI strip ---------- */
+  .kpi-strip{
+    display:flex; align-items:stretch;
+    border-bottom:1px solid var(--line);
+    padding:26px 0;
+    gap:0;
+  }
+  .kpi{
+    flex:1; padding:0 28px; position:relative;
+  }
+  .kpi:first-child{ padding-left:0; }
+  .kpi:not(:last-child)::after{
+    content:''; position:absolute; right:0; top:4px; bottom:4px; width:1px; background:var(--line);
+  }
+  .kpi .num{ font-size:34px; font-weight:600; line-height:1; font-family:'IBM Plex Mono', monospace; }
+  .kpi .num[contenteditable]{
+    outline:none; cursor:text; border-bottom:1px dashed transparent;
+    display:inline-block; min-width:1ch; border-radius:2px;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .kpi .num[contenteditable]:hover{ border-bottom-color:var(--text-faint); }
+  .kpi .num[contenteditable]:focus{ border-bottom-color:var(--amber); background:rgba(232,163,61,.06); }
+  .kpi .num.safe{ color:var(--safe); }
+  .kpi .num.warn{ color:var(--warn); }
+  .kpi .num.danger{ color:var(--danger); }
+  .kpi .label{ font-size:13px; color:var(--text-dim); margin-top:9px; }
+
+  /* ---------- main grid ---------- */
+  .grid{
+    display:grid;
+    grid-template-columns:1.55fr 1fr;
+    gap:28px;
+    margin-top:30px;
+  }
+  @media (max-width:980px){ .grid{ grid-template-columns:1fr; } }
+  .grid.grid-single{ grid-template-columns:1fr; }
+
+  .dash-preview-row{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(240px,1fr)); gap:20px; margin-top:24px;
+  }
+  @media (max-width:980px){ .dash-preview-row{ grid-template-columns:1fr; } }
+  .dash-preview-card{
+    display:block; background:var(--panel); border:1px solid var(--line); border-radius:6px;
+    padding:18px 20px; text-decoration:none; color:var(--text);
+    transition:border-color .15s ease, transform .15s ease;
+  }
+  .dash-preview-card:hover{ border-color:var(--amber); transform:translateY(-1px); }
+  .dash-preview-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .dash-preview-link{ font-size:12.5px; color:var(--amber); white-space:nowrap; }
+  .dash-preview-hint{ font-size:13px; color:var(--text-dim); margin-top:8px; line-height:1.45; }
+
+  .panel-head{
+    display:flex; align-items:baseline; justify-content:space-between;
+    margin-bottom:14px;
+  }
+  .panel-title{ font-size:16px; font-weight:600; }
+  .panel-hint{ font-size:12.5px; color:var(--text-faint); }
+
+  /* ---------- map panel ---------- */
+  .map-panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:6px;
+    padding:22px 22px 16px; position:relative; overflow:hidden;
+  }
+  .map-wrap{ position:relative; }
+  .radar-sweep{
+    position:absolute; left:6%; top:38%; width:230px; height:230px;
+    transform:translate(-50%,-50%);
+    border-radius:50%;
+    background:conic-gradient(from 0deg, rgba(232,163,61,.22), rgba(232,163,61,0) 32%);
+    animation:sweep 5.5s linear infinite;
+    pointer-events:none;
+  }
+  @keyframes sweep{ to{ transform:translate(-50%,-50%) rotate(360deg); } }
+
+  svg.map-svg{ width:100%; height:auto; display:block; position:relative; z-index:1; }
+  .route-line{ fill:none; stroke:var(--line); stroke-width:1.4; }
+  .node-label{ font-size:12px; fill:var(--text-dim); font-family:'Space Grotesk', sans-serif; }
+  .node-label.origin{ fill:var(--text); font-weight:600; }
+  .node-dot{ }
+  .shipment-dot{ cursor:pointer; }
+  .shipment-dot circle.core{ transition:r .15s ease; }
+  .shipment-dot:hover circle.core{ r:7; }
+  .warn-ring{ animation:warnPulse 1.8s ease-in-out infinite; transform-origin:center; }
+  @keyframes warnPulse{
+    0%,100%{ opacity:.55; transform:scale(1); }
+    50%{ opacity:.1; transform:scale(1.9); }
+  }
+
+  .legend{ display:flex; gap:22px; margin-top:10px; padding-top:14px; border-top:1px solid var(--line-soft); flex-wrap:wrap; }
+  .legend-item{ display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--text-dim); }
+  .legend-swatch{ width:9px; height:9px; border-radius:50%; }
+
+  /* ---------- alert feed panel ---------- */
+  .feed-panel{ display:flex; flex-direction:column; }
+  .feed-panel.feed-panel-full{ max-width:760px; }
+  .feed-panel.feed-panel-full .feed-list{ max-height:none; }
+  .simulate-btn{
+    background:transparent; border:1px solid var(--amber); color:var(--amber);
+    font-family:'Space Grotesk', sans-serif; font-size:12.5px; font-weight:500;
+    padding:6px 12px; border-radius:4px; cursor:pointer;
+    transition:background .15s ease, color .15s ease;
+  }
+  .simulate-btn:hover{ background:var(--amber); color:#1a1300; }
+
+  .feed-list{
+    background:var(--panel); border:1px solid var(--line); border-radius:6px;
+    overflow:hidden;
+  }
+  .alert-row{
+    display:flex; gap:0; border-bottom:1px solid var(--line-soft);
+    position:relative;
+  }
+  .alert-row:last-child{ border-bottom:none; }
+  .sev-bar{ width:3px; flex-shrink:0; }
+  .sev-bar.danger{ background:var(--danger); }
+  .sev-bar.warn{ background:var(--warn); }
+  .alert-main{ flex:1; padding:15px 18px; cursor:pointer; }
+  .alert-top{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .alert-id{ font-size:12px; color:var(--text-faint); font-family:'IBM Plex Mono', monospace; }
+  .alert-score{ font-size:12px; font-family:'IBM Plex Mono', monospace; }
+  .alert-score.danger{ color:var(--danger); }
+  .alert-score.warn{ color:var(--warn); }
+  .alert-title{ font-size:14.5px; margin-top:6px; line-height:1.4; }
+  .alert-meta{ font-size:12.5px; color:var(--text-dim); margin-top:4px; }
+
+  .alert-detail{
+    max-height:0; overflow:hidden;
+    transition:max-height .28s ease;
+    background:var(--panel-alt);
+  }
+  .alert-detail.open{ max-height:420px; }
+  .alert-detail-inner{ padding:0 18px 18px; }
+
+  .risk-gauge{ margin:14px 0 16px; }
+  .risk-gauge .rg-top{ display:flex; justify-content:space-between; font-size:12px; color:var(--text-dim); margin-bottom:6px; }
+  .rg-track{ height:6px; border-radius:3px; background:var(--line); overflow:hidden; }
+  .rg-fill{ height:100%; border-radius:3px; }
+
+  .timeline{ display:flex; gap:0; margin:16px 0; overflow-x:auto; }
+  .tl-step{ flex:1; min-width:98px; position:relative; padding-top:14px; }
+  .tl-step::before{
+    content:''; position:absolute; top:4px; left:0; width:100%; height:1px; background:var(--line);
+  }
+  .tl-step .tl-dot{
+    position:absolute; top:0; left:0; width:8px; height:8px; border-radius:50%;
+    background:var(--safe); transform:translateY(-3.5px);
+  }
+  .tl-step.pending .tl-dot{ background:var(--line); }
+  .tl-step.flag .tl-dot{ background:var(--danger); }
+  .tl-step .tl-time{ font-size:11px; color:var(--text-faint); font-family:'IBM Plex Mono', monospace; }
+  .tl-step .tl-label{ font-size:12px; color:var(--text-dim); margin-top:2px; }
+
+  .eta-compare{ display:flex; gap:26px; margin:14px 0 4px; }
+  .eta-box .eta-label{ font-size:11.5px; color:var(--text-faint); }
+  .eta-box .eta-val{ font-size:15px; font-family:'IBM Plex Mono', monospace; margin-top:3px; }
+  .eta-box .eta-val.danger{ color:var(--danger); }
+
+  .action-row{ display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; }
+  .btn{
+    font-family:'Space Grotesk', sans-serif; font-size:13px; font-weight:500;
+    padding:8px 14px; border-radius:4px; cursor:pointer; border:1px solid transparent;
+  }
+  .btn-primary{ background:var(--amber); color:#1a1300; }
+  .btn-primary:hover{ filter:brightness(1.08); }
+  .btn-ghost{ background:transparent; border-color:var(--line); color:var(--text-dim); }
+  .btn-ghost:hover{ border-color:var(--text-dim); color:var(--text); }
+  .btn-resolve{ background:transparent; border-color:var(--safe); color:var(--safe); }
+  .btn-resolve:hover{ background:var(--safe); color:#0d1f18; }
+
+  .resolved-note{
+    display:none; align-items:center; gap:8px; font-size:13px; color:var(--safe);
+    padding:15px 18px; border-bottom:1px solid var(--line-soft);
+  }
+  .alert-row.resolved .alert-main, .alert-row.resolved .alert-detail{ display:none; }
+  .alert-row.resolved .resolved-note{ display:flex; }
+  .alert-row.resolved .sev-bar{ background:var(--safe); }
+
+  .feed-footer{
+    margin-top:14px; font-size:12.5px; color:var(--text-faint); text-align:center;
+  }
+
+  /* new alert entrance */
+  .alert-row.entering{ animation:enterRow .5s ease; }
+  @keyframes enterRow{
+    from{ opacity:0; transform:translateY(-8px); background:rgba(232,163,61,.10); }
+    to{ opacity:1; transform:translateY(0); background:transparent; }
+  }
+
+  footer.credit{
+    margin-top:44px; padding-top:20px; border-top:1px solid var(--line);
+    font-size:12.5px; color:var(--text-faint); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;
+  }
+
+  /* ---------- insights / report view ---------- */
+  .view{ display:none; }
+  .view.active{ display:block; }
+
+  .insight-hero{
+    padding:30px 0 26px; border-bottom:1px solid var(--line);
+  }
+  .insight-eyebrow{ font-size:12.5px; color:var(--amber); }
+  .insight-hero h1{
+    font-size:26px; font-weight:600; line-height:1.35; margin-top:10px; max-width:760px;
+  }
+  .insight-hero p{
+    font-size:14px; color:var(--text-dim); line-height:1.65; margin-top:14px; max-width:680px;
+  }
+
+  .stat-row{
+    display:flex; flex-wrap:wrap; border-bottom:1px solid var(--line); padding:26px 0; gap:0;
+  }
+  .stat{ flex:1; min-width:170px; padding:0 28px 18px 0; }
+  .stat .snum{ font-size:30px; font-weight:600; font-family:'IBM Plex Mono', monospace; color:var(--amber); line-height:1; }
+  .stat .slabel{ font-size:13px; color:var(--text-dim); margin-top:9px; line-height:1.5; }
+
+  .insight-section{ margin-top:34px; }
+  .insight-section .panel-title{ font-size:16px; font-weight:600; }
+  .insight-section .panel-hint{ font-size:12.5px; color:var(--text-faint); margin-top:4px; }
+
+  .persona-panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:6px;
+    margin-top:16px; overflow:hidden;
+  }
+  .persona-row{
+    display:flex; gap:0; border-bottom:1px solid var(--line-soft); padding:16px 20px;
+  }
+  .persona-row:last-child{ border-bottom:none; }
+  .persona-row .pkey{
+    width:150px; flex-shrink:0; font-size:12.5px; color:var(--text-faint); font-family:'IBM Plex Mono', monospace; padding-top:1px;
+  }
+  .persona-row .pval{ font-size:13.5px; color:var(--text); line-height:1.6; }
+
+  .compare-grid{ margin-top:16px; display:flex; flex-direction:column; gap:10px; }
+  .compare-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:6px;
+    padding:16px 20px; display:flex; gap:22px; align-items:flex-start;
+  }
+  .compare-card .cname{
+    width:190px; flex-shrink:0; font-size:14px; font-weight:600; line-height:1.4;
+  }
+  .compare-card .cdesc{ font-size:13px; color:var(--text-dim); line-height:1.6; }
+
+  .gap-panel{
+    display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px;
+  }
+  @media (max-width:860px){ .gap-panel{ grid-template-columns:1fr; } }
+  .gap-card{
+    border:1px solid var(--line); border-radius:6px; padding:18px 20px;
+  }
+  .gap-card.limit{ border-color:var(--danger-dim); background:rgba(226,87,76,.06); }
+  .gap-card.opp{ border-color:var(--safe-dim); background:rgba(79,178,138,.06); }
+  .gap-card .gtitle{
+    font-size:12.5px; font-weight:600; letter-spacing:.2px; margin-bottom:12px;
+  }
+  .gap-card.limit .gtitle{ color:var(--danger); }
+  .gap-card.opp .gtitle{ color:var(--safe); }
+  .gap-card ul{ list-style:none; }
+  .gap-card li{
+    font-size:13px; color:var(--text-dim); line-height:1.6; padding-left:14px; position:relative; margin-bottom:10px;
+  }
+  .gap-card li:last-child{ margin-bottom:0; }
+  .gap-card li::before{
+    content:''; position:absolute; left:0; top:8px; width:4px; height:4px; border-radius:50%; background:var(--text-faint);
+  }
+
+  .position-box{
+    margin-top:20px; border:1px solid var(--amber); border-radius:6px;
+    padding:20px 22px; background:rgba(232,163,61,.06);
+  }
+  .position-box .plabel{ font-size:12px; color:var(--amber); }
+  .position-box .pquote{ font-size:16px; margin-top:8px; line-height:1.5; }
+
+  /* ---------- add-trip button + shipments table ---------- */
+  .add-trip-btn{
+    background:var(--amber); color:#1a1300; border:1px solid var(--amber);
+    font-family:'Space Grotesk', sans-serif; font-size:12.5px; font-weight:600;
+    padding:6px 13px; border-radius:4px; cursor:pointer;
+    transition:filter .15s ease;
+  }
+  .add-trip-btn:hover{ filter:brightness(1.08); }
+
+  .shipments-panel{ margin-top:28px; }
+  .shipments-table{
+    background:var(--panel); border:1px solid var(--line); border-radius:6px;
+    overflow:hidden; margin-top:14px;
+  }
+  .shipments-empty{
+    padding:26px 20px; text-align:center; font-size:13px; color:var(--text-faint);
+  }
+  .strow{
+    display:grid; grid-template-columns:1fr 1.1fr 1fr 1fr 1.1fr .55fr .7fr .8fr .5fr;
+    gap:10px; align-items:center; padding:12px 18px; border-bottom:1px solid var(--line-soft);
+    font-size:13px;
+  }
+  .strow:last-child{ border-bottom:none; }
+  .strow.sthead{
+    font-size:11.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.3px;
+    font-family:'IBM Plex Mono', monospace; padding-top:14px; padding-bottom:14px;
+  }
+  .strow .stid{ font-family:'IBM Plex Mono', monospace; color:var(--text-dim); }
+  .strow .stcargo{ color:var(--text-dim); }
+  .st-badge{
+    display:inline-flex; align-items:center; gap:6px; font-size:12px;
+  }
+  .st-badge::before{ content:''; width:7px; height:7px; border-radius:50%; background:var(--safe); }
+  .st-del{
+    background:transparent; border:1px solid var(--line); color:var(--text-faint);
+    font-size:11.5px; padding:4px 9px; border-radius:4px; cursor:pointer; justify-self:end;
+  }
+  .st-del:hover{ border-color:var(--danger); color:var(--danger); }
+  @media (max-width:900px){
+    .strow{ grid-template-columns:1fr 1fr; grid-auto-rows:auto; }
+    .strow.sthead{ display:none; }
+    .strow > div{ padding:2px 0; }
+  }
+
+  /* ---------- modal ---------- */
+  .modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(10,13,18,.6);
+    align-items:center; justify-content:center; z-index:50; padding:20px;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal-box{
+    background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    width:100%; max-width:480px; max-height:88vh; overflow-y:auto;
+    padding:24px 26px 22px;
+  }
+  .modal-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
+  .modal-title{ font-size:17px; font-weight:600; }
+  .modal-close{
+    background:transparent; border:none; color:var(--text-faint); font-size:20px;
+    cursor:pointer; line-height:1; padding:2px 4px;
+  }
+  .modal-close:hover{ color:var(--text); }
+  .modal-hint{ font-size:12.5px; color:var(--text-faint); margin-top:4px; margin-bottom:18px; }
+  .field-row{ margin-bottom:14px; }
+  .field-row label{ display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:6px; }
+  .field-row input, .field-row select{
+    width:100%; background:var(--panel-alt); border:1px solid var(--line); border-radius:5px;
+    color:var(--text); font-family:'Space Grotesk', sans-serif; font-size:13.5px;
+    padding:9px 11px; outline:none;
+  }
+  .field-row input:focus, .field-row select:focus{ border-color:var(--amber); }
+  .field-pair{ display:flex; gap:12px; }
+  .field-pair .field-row{ flex:1; }
+  .field-error{ font-size:12px; color:var(--danger); margin-top:8px; display:none; }
+  .field-error.show{ display:block; }
+  .modal-actions{ display:flex; gap:10px; margin-top:20px; }
+  .modal-actions .btn{ flex:1; justify-content:center; text-align:center; }
+
+  /* ---------- IoT sensor panel (cargo condition) ---------- */
+  .iot-panel{
+    margin:14px 0 4px; border:1px solid var(--line-soft); border-radius:5px;
+    background:rgba(255,255,255,.015); padding:13px 14px;
+  }
+  .iot-panel-head{
+    display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-dim);
+    margin-bottom:11px;
+  }
+  .iot-dot{ width:6px; height:6px; border-radius:50%; background:var(--safe); flex-shrink:0; }
+  .iot-dot.alert{ background:var(--danger); animation:warnPulse 1.8s ease-in-out infinite; }
+  .sensor-grid{
+    display:grid; grid-template-columns:repeat(4, 1fr); gap:10px;
+  }
+  @media (max-width:560px){ .sensor-grid{ grid-template-columns:repeat(2, 1fr); } }
+  .sensor-item{
+    background:var(--panel); border:1px solid var(--line-soft); border-radius:4px;
+    padding:9px 10px;
+  }
+  .sensor-item.breach{ border-color:var(--danger-dim); background:rgba(226,87,76,.07); }
+  .sensor-label{ font-size:10.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.3px; }
+  .sensor-val{ font-size:15px; font-family:'IBM Plex Mono', monospace; margin-top:4px; }
+  .sensor-val.breach{ color:var(--danger); }
+  .sensor-sub{ font-size:11px; color:var(--text-faint); margin-top:2px; }
+
+  /* ---------- tier / sensor badges (shipment source, alert list) ---------- */
+  .tier-badge{
+    display:inline-flex; align-items:center; gap:5px; font-size:11px;
+    font-family:'IBM Plex Mono', monospace; padding:2px 7px; border-radius:3px;
+    border:1px solid var(--line); color:var(--text-faint);
+  }
+  .tier-badge.iot{ color:var(--amber); border-color:rgba(232,163,61,.4); }
+  .tier-badge.iot::before{ content:'●'; font-size:8px; }
+  .tier-badge.basic::before{ content:'○'; font-size:8px; }
+
+  .field-checkbox{ display:flex; align-items:flex-start; gap:9px; padding:2px 0 4px; }
+  .field-checkbox input{ width:auto; margin-top:3px; accent-color:var(--amber); }
+  .field-checkbox .fc-text{ font-size:13px; color:var(--text); }
+  .field-checkbox .fc-hint{ font-size:11.5px; color:var(--text-faint); margin-top:2px; }
+
+  /* ---------- simulated camera snapshot ---------- */
+  .photo-frame{
+    margin:14px 0 4px; border:1px solid var(--line-soft); border-radius:5px;
+    overflow:hidden; background:#0c0f14;
+  }
+  .photo-frame-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:8px 11px; font-size:11px; color:var(--text-faint);
+    font-family:'IBM Plex Mono', monospace; border-bottom:1px solid var(--line-soft);
+  }
+  .photo-frame-head .cam-live{ display:flex; align-items:center; gap:5px; color:#e2574c; }
+  .photo-frame-head .cam-live::before{
+    content:''; width:6px; height:6px; border-radius:50%; background:#e2574c;
+    animation:warnPulse 1.6s ease-in-out infinite;
+  }
+  .photo-canvas{ position:relative; width:100%; aspect-ratio:16/9; background:#11151c; }
+  .photo-canvas svg{ width:100%; height:100%; display:block; }
+  .photo-frame-foot{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:7px 11px; font-size:10.5px; color:var(--text-faint);
+    font-family:'IBM Plex Mono', monospace; border-top:1px solid var(--line-soft);
+  }
+  @keyframes scanSweepMove{ 0%{ transform:translateX(-20px); } 100%{ transform:translateX(340px); } }
+  .scan-sweep-bar{ animation:scanSweepMove 2.6s linear infinite; }
+
+  /* ============ LOGIN SCREEN (neumorphic) ============ */
+  :root{
+    --nm-bg:#e6e9ef;
+    --nm-shadow-dark:#c3c8d1;
+    --nm-shadow-light:#ffffff;
+    --nm-text:#333a47;
+    --nm-text-dim:#8188967f;
+    --nm-text-faint:#9aa0ab;
+  }
+  .login-overlay{
+    position:fixed; inset:0; z-index:500;
+    background:var(--nm-bg);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    transition:opacity .4s ease, visibility .4s ease;
+  }
+  .login-overlay.hidden{ opacity:0; visibility:hidden; pointer-events:none; }
+  .login-brand{
+    position:absolute; top:34px; left:50%; transform:translateX(-50%);
+    display:flex; align-items:center; gap:10px; color:var(--nm-text);
+  }
+  .login-brand .brand-mark{ position:relative; width:28px; height:28px; }
+  .login-brand .brand-mark .ring{
+    position:absolute; inset:0; border:2px solid #e8a33d; border-radius:50%;
+    border-top-color:transparent; border-right-color:transparent;
+  }
+  .login-brand .brand-mark .dot{
+    position:absolute; top:50%; left:50%; width:6px; height:6px; margin:-3px;
+    border-radius:50%; background:#e8a33d;
+  }
+  .login-brand-word{ font-weight:700; font-size:15px; letter-spacing:.2px; }
+
+  .login-card{
+    width:340px; max-width:88vw; padding:38px 30px 30px;
+    background:var(--nm-bg); border-radius:28px;
+    box-shadow:10px 10px 22px var(--nm-shadow-dark), -10px -10px 22px var(--nm-shadow-light);
+  }
+  .login-avatar{
+    width:76px; height:76px; margin:0 auto 18px; border-radius:50%;
+    background:var(--nm-bg); display:flex; align-items:center; justify-content:center;
+    box-shadow:6px 6px 14px var(--nm-shadow-dark), -6px -6px 14px var(--nm-shadow-light);
+  }
+  .login-avatar svg{ width:30px; height:30px; }
+  .login-title{ text-align:center; font-size:19px; font-weight:700; color:var(--nm-text); }
+  .login-sub{ text-align:center; font-size:12.5px; color:var(--nm-text-faint); margin-top:3px; margin-bottom:26px; }
+
+  .login-field{
+    position:relative; margin-bottom:16px;
+    border-radius:14px; background:var(--nm-bg);
+    box-shadow:inset 4px 4px 9px var(--nm-shadow-dark), inset -4px -4px 9px var(--nm-shadow-light);
+  }
+  .login-field svg.field-icon{
+    position:absolute; left:15px; top:50%; transform:translateY(-50%);
+    width:16px; height:16px; color:#9aa0ab; pointer-events:none;
+  }
+  .login-field input{
+    width:100%; border:none; background:transparent; outline:none;
+    padding:14px 15px 14px 42px; font-size:13.5px; color:var(--nm-text);
+    border-radius:14px; box-sizing:border-box; font-family:inherit;
+  }
+  .login-field input::placeholder{ color:#9aa0ab; }
+  .login-field .toggle-eye{
+    position:absolute; right:14px; top:50%; transform:translateY(-50%);
+    width:17px; height:17px; color:#9aa0ab; cursor:pointer; background:none; border:none; padding:0;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  .login-row{ display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; }
+  .login-remember{ display:flex; align-items:center; gap:8px; font-size:12px; color:var(--nm-text-faint); }
+  .nm-switch{
+    width:34px; height:19px; border-radius:20px; background:var(--nm-bg); position:relative; cursor:pointer;
+    box-shadow:inset 3px 3px 6px var(--nm-shadow-dark), inset -3px -3px 6px var(--nm-shadow-light);
+    transition:background .2s ease; flex-shrink:0;
+  }
+  .nm-switch .knob{
+    position:absolute; top:2.5px; left:2.5px; width:14px; height:14px; border-radius:50%;
+    background:var(--nm-bg); box-shadow:2px 2px 4px var(--nm-shadow-dark), -1px -1px 3px var(--nm-shadow-light);
+    transition:left .2s ease, background .2s ease;
+  }
+  .nm-switch.on{ background:#e8a33d33; }
+  .nm-switch.on .knob{ left:17.5px; background:#e8a33d; box-shadow:2px 2px 5px rgba(232,163,61,.5); }
+  .login-forgot{ font-size:12px; color:#e8a33d; text-decoration:none; }
+  .login-forgot:hover{ text-decoration:underline; }
+
+  .login-btn{
+    width:100%; padding:14px; border:none; border-radius:14px; cursor:pointer;
+    background:linear-gradient(145deg, #efb85a, #d4903a); color:#fff;
+    font-size:13.5px; font-weight:700; letter-spacing:.6px;
+    box-shadow:6px 6px 14px var(--nm-shadow-dark), -3px -3px 10px var(--nm-shadow-light);
+    transition:transform .12s ease, box-shadow .12s ease;
+    font-family:inherit;
+  }
+  .login-btn:hover{ transform:translateY(-1px); }
+  .login-btn:active{ transform:translateY(0); box-shadow:inset 3px 3px 8px #b97e30, inset -3px -3px 8px #f0be6c; }
+
+  .login-signup{ text-align:center; font-size:12px; color:var(--nm-text-faint); margin-top:18px; }
+  .login-signup a{ color:var(--nm-text); font-weight:600; text-decoration:none; }
+  .login-signup a:hover{ text-decoration:underline; }
+
+  .login-error{
+    display:none; text-align:center; font-size:11.5px; color:#c0392b;
+    margin:-8px 0 14px;
+  }
+  .login-error.show{ display:block; }
+
+  .login-hint{
+    text-align:center; font-size:10.5px; color:var(--nm-text-faint);
+    margin-top:12px; line-height:1.5;
+  }
+  .login-hint b{ color:var(--nm-text); font-weight:600; }
+
+
+  /* ============ ANIMATED LOGIN <-> SIGNUP (áp dụng từ Reel: container.classList 'active') ============ */
+  .login-card.auth-container{
+    position:relative; width:780px; max-width:94vw; height:560px; padding:0; overflow:hidden;
+  }
+  .login-brand{ top:22px; }
+  .auth-shape{
+    position:absolute; inset:0; z-index:1;
+    background:linear-gradient(145deg, #efb85a, #d4903a);
+    clip-path:polygon(58% 0, 100% 0, 100% 100%, 46% 100%);
+    transition:clip-path .75s cubic-bezier(.65,.05,.25,1);
+  }
+  .auth-container.active .auth-shape{ clip-path:polygon(0 0, 42% 0, 54% 100%, 0 100%); }
+
+  .auth-info{
+    position:absolute; top:0; bottom:0; width:50%; z-index:2;
+    display:flex; flex-direction:column; justify-content:center;
+    padding:0 44px; color:#fff;
+    opacity:0; visibility:hidden; pointer-events:none;
+    transition:opacity .35s ease, transform .5s ease, visibility 0s linear .35s;
+  }
+  .auth-info h2{ font-size:26px; font-weight:800; line-height:1.15; letter-spacing:.3px; margin-bottom:12px; }
+  .auth-info p{ font-size:12.5px; line-height:1.6; opacity:.92; }
+  .info-login{ right:0; text-align:right; transform:translateX(40px); }
+  .info-signup{ left:0; text-align:left; transform:translateX(-40px); }
+  .auth-container:not(.active) .info-login,
+  .auth-container.active .info-signup{
+    opacity:1; visibility:visible; transform:none;
+    transition:opacity .45s ease .3s, transform .55s ease .3s, visibility 0s;
+  }
+
+  .auth-panel{
+    position:absolute; top:0; bottom:0; width:50%; z-index:3;
+    display:flex; flex-direction:column; justify-content:center;
+    padding:0 44px;
+    opacity:0; visibility:hidden; pointer-events:none;
+    transition:opacity .35s ease, transform .5s ease, visibility 0s linear .35s;
+  }
+  #loginPanel{ left:0; transform:translateX(-40px); }
+  #signupPanel, #otpPanel{ right:0; transform:translateX(40px); }
+  .auth-container:not(.active) #loginPanel,
+  .auth-container.active:not(.otp) #signupPanel,
+  .auth-container.active.otp #otpPanel{
+    opacity:1; visibility:visible; pointer-events:auto; transform:none;
+    transition:opacity .45s ease .3s, transform .55s ease .3s, visibility 0s;
+  }
+  .auth-container .login-avatar{ width:60px; height:60px; margin-bottom:12px; }
+  .auth-container .login-avatar svg{ width:26px; height:26px; }
+  .auth-container .login-sub{ margin-bottom:20px; }
+
+  @media (max-width:760px){
+    .login-card.auth-container{ width:340px; height:auto; padding:38px 30px 30px; overflow:visible; }
+    .auth-shape, .auth-info{ display:none; }
+    .auth-panel{
+      position:relative; width:100%; padding:0; display:none;
+      opacity:1; visibility:visible; pointer-events:auto; transform:none; transition:none;
+    }
+    .auth-container:not(.active) #loginPanel,
+    .auth-container.active:not(.otp) #signupPanel,
+    .auth-container.active.otp #otpPanel{ display:block; transition:none; }
+  }
+
+  .shell{ transition:opacity .3s ease; display:none; }
+  .shell.shown{ display:block; }
+
+  /* ---------- IoT warehouse space scan ---------- */
+  .wh-panel{ padding:22px 22px 20px; }
+  .wh-status{ display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-dim); }
+  .wh-status .wh-status-dot{
+    width:7px; height:7px; border-radius:50%; background:var(--amber);
+    box-shadow:0 0 0 0 rgba(232,163,61,.6); animation:whStatusPulse 1.6s ease-in-out infinite;
+    flex-shrink:0;
+  }
+  @keyframes whStatusPulse{
+    0%,100%{ box-shadow:0 0 0 0 rgba(232,163,61,.45); }
+    50%{ box-shadow:0 0 0 5px rgba(232,163,61,0); }
+  }
+
+  .wh-scanner{ position:absolute; top:2px; left:50%; transform:translateX(-50%); width:20px; height:20px; z-index:2; }
+  .wh-scanner .ring{
+    position:absolute; inset:0; border-radius:50%; border:1px solid var(--amber);
+    opacity:.55; animation:pulseRing 2.2s ease-out infinite;
+  }
+  .wh-scanner .dot{ position:absolute; inset:7px; border-radius:50%; background:var(--amber); }
+
+  .wh-floor-wrap{ position:relative; margin-top:26px; }
+  .wh-beam{
+    position:absolute; top:0; bottom:0; width:6%;
+    background:linear-gradient(90deg, rgba(232,163,61,0), rgba(232,163,61,.28) 40%, rgba(232,163,61,.9) 50%, rgba(232,163,61,.28) 60%, rgba(232,163,61,0));
+    pointer-events:none; will-change:left; z-index:1;
+  }
+  svg.wh-svg{ width:100%; height:auto; display:block; position:relative; }
+  .wh-row-label{ font-size:12.5px; fill:var(--text-dim); font-family:'IBM Plex Mono', monospace; }
+  .wh-slot rect.wh-box{ stroke-width:1.2; transition:fill .2s ease, stroke .2s ease; }
+  .wh-slot.empty rect.wh-box{ fill:none; stroke:var(--line-soft); stroke-dasharray:3 3; }
+  .wh-slot.occupied rect.wh-box{ fill:var(--safe-dim); stroke:var(--safe); }
+  .wh-slot.anomaly rect.wh-box{ fill:var(--danger-dim); stroke:var(--danger); }
+  .wh-slot text{ font-size:9px; fill:var(--text-faint); font-family:'IBM Plex Mono', monospace; pointer-events:none; }
+  .wh-slot.wh-hit rect.wh-box{ animation:whFlash .55s ease; }
+  @keyframes whFlash{
+    0%{ filter:brightness(1); }
+    45%{ filter:brightness(1.9); }
+    100%{ filter:brightness(1); }
+  }
+  .wh-slot.anomaly .wh-warn-dot{ animation:warnPulse 1.8s ease-in-out infinite; transform-origin:center; }
+
+  .wh-legend{ display:flex; gap:22px; margin-top:14px; padding-top:14px; border-top:1px solid var(--line-soft); flex-wrap:wrap; }
+
+  .wh-log-list{ margin-top:14px; }
+  .wh-log-list .alert-row.info .sev-bar{ background:var(--text-faint); }
+  .wh-log-empty{ padding:22px 18px; text-align:center; font-size:13px; color:var(--text-faint); background:var(--panel); border:1px solid var(--line); border-radius:6px; }
+
+  /* ---------- vehicle scan tab ---------- */
+  .veh-chip-row{ display:flex; gap:10px; flex-wrap:wrap; margin:18px 0 4px; }
+  .veh-chip{
+    display:flex; align-items:center; gap:8px;
+    border:1px solid var(--line); border-radius:20px; padding:8px 14px;
+    font-size:12.5px; color:var(--text-dim); cursor:pointer; background:transparent;
+    font-family:'Space Grotesk', sans-serif; transition:border-color .15s ease, color .15s ease, background .15s ease;
+  }
+  .veh-chip:hover{ border-color:var(--text-dim); color:var(--text); }
+  .veh-chip.active{ border-color:var(--amber); color:var(--text); background:rgba(232,163,61,.08); }
+  .veh-chip .veh-chip-plate{ font-family:'IBM Plex Mono', monospace; font-weight:600; }
+  .veh-chip .veh-chip-flag{ width:6px; height:6px; border-radius:50%; background:var(--danger); flex-shrink:0; }
+
+  /* ---------- barcode scan row (trip modal + xray form) ---------- */
+  .barcode-row{ display:flex; gap:8px; }
+  .barcode-row input{ flex:1; }
+  .barcode-scan-btn{
+    display:flex; align-items:center; gap:6px; white-space:nowrap;
+    background:rgba(232,163,61,.1); border:1px solid var(--amber); color:var(--amber);
+    font-size:12.5px; font-weight:600; padding:0 14px; border-radius:6px; cursor:pointer;
+    font-family:'Space Grotesk', sans-serif; transition:background .15s ease;
+  }
+  .barcode-scan-btn:hover{ background:rgba(232,163,61,.18); }
+  .barcode-scan-btn:disabled{ opacity:.5; cursor:not-allowed; }
+  .barcode-scan-btn .bc-icon{ font-size:14px; }
+  .barcode-scan-btn.scanning{ animation:bcPulse 1s ease-in-out infinite; }
+  @keyframes bcPulse{ 0%,100%{ opacity:1; } 50%{ opacity:.55; } }
+
+  /* ---------- xray inspection tab ---------- */
+  .xray-form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px 20px; margin-top:16px; }
+  @media (max-width:800px){ .xray-form-grid{ grid-template-columns:1fr; } }
+  .xray-add-btn{
+    grid-column:1 / -1; justify-self:start; background:var(--amber); color:#151a24; border:none;
+    font-weight:700; font-size:13px; padding:10px 20px; border-radius:6px; cursor:pointer;
+    font-family:'Space Grotesk', sans-serif;
+  }
+  .xray-add-btn:hover{ filter:brightness(1.08); }
+
+  .xray-bay-wrap{ display:flex; justify-content:center; padding:18px 0 6px; }
+  svg.xray-svg{ width:100%; max-width:340px; height:auto; display:block; }
+  .xray-result{ text-align:center; font-size:13.5px; min-height:22px; margin-top:2px; font-weight:600; }
+  .xray-result.ok{ color:var(--safe); }
+  .xray-result.bad{ color:var(--danger); }
+  .xray-result-sub{ text-align:center; font-size:12px; color:var(--text-faint); margin-top:2px; }
+
+  .xray-pending-list{ margin-top:14px; display:flex; flex-direction:column; gap:8px; }
+  .xray-pending-item{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:10px 14px;
+  }
+  .xray-pending-item .xp-main{ font-size:13px; }
+  .xray-pending-item .xp-meta{ font-size:12px; color:var(--text-faint); margin-top:2px; }
+  .xray-pending-item .xp-scan-btn{
+    background:transparent; border:1px solid var(--amber); color:var(--amber); font-size:12px;
+    font-weight:600; padding:6px 14px; border-radius:5px; cursor:pointer; white-space:nowrap;
+    font-family:'Space Grotesk', sans-serif;
+  }
+  .xray-pending-item .xp-scan-btn:hover{ background:rgba(232,163,61,.1); }
+  .xray-pending-item .xp-scan-btn:disabled{ opacity:.4; cursor:not-allowed; }
+  .xray-pending-item.active-scan{ border-color:var(--amber); }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+</head>
+<body>
+
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-brand">
+    <div class="brand-mark"><div class="ring"></div><div class="dot"></div></div>
+    <div class="login-brand-word">Tiền Trạm</div>
+  </div>
+  <div class="login-card auth-container" id="authContainer">
+
+    <div class="auth-shape"></div>
+    <div class="auth-info info-login">
+      <h2>CHÀO MỪNG<br>TRỞ LẠI!</h2>
+      <p>Đăng nhập để tiếp tục theo dõi rủi ro vận chuyển và nhận cảnh báo sớm cho từng lô hàng.</p>
+    </div>
+    <div class="auth-info info-signup">
+      <h2>XIN CHÀO,<br>BẠN MỚI!</h2>
+      <p>Tạo tài khoản để bắt đầu theo dõi lô hàng và nhận cảnh báo sớm từ Tiền Trạm.</p>
+    </div>
+
+    <!-- ============ LOGIN PANEL ============ -->
+    <div id="loginPanel" class="auth-panel">
+      <div class="login-avatar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#9aa0ab" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+      </div>
+      <div class="login-title">Chào mừng trở lại</div>
+      <div class="login-sub">Đăng nhập để tiếp tục</div>
+
+      <form id="loginForm">
+        <div class="login-field">
+          <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+          <input type="text" id="loginUser" placeholder="Tên đăng nhập" autocomplete="username">
+        </div>
+        <div class="login-field">
+          <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          <input type="password" id="loginPass" placeholder="Mật khẩu" autocomplete="current-password">
+          <button type="button" class="toggle-eye" data-target="loginPass" aria-label="Hiện mật khẩu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+
+        <div class="login-error" id="loginError">Sai tên đăng nhập hoặc mật khẩu.</div>
+
+        <div class="login-row">
+          <div class="login-remember">
+            <div class="nm-switch on" id="rememberSwitch"><div class="knob"></div></div>
+            <span>Ghi nhớ đăng nhập</span>
+          </div>
+          <a href="#" class="login-forgot" id="forgotLink">Quên mật khẩu?</a>
+        </div>
+
+        <button type="submit" class="login-btn">ĐĂNG NHẬP</button>
+      </form>
+      <div class="login-signup">Chưa có tài khoản? <a href="#" id="goSignup">Đăng ký</a></div>
+    </div>
+
+    <!-- ============ SIGNUP PANEL ============ -->
+    <div id="signupPanel" class="auth-panel">
+      <div class="login-avatar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#9aa0ab" stroke-width="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+      </div>
+      <div class="login-title">Tạo tài khoản</div>
+      <div class="login-sub">Đăng ký để bắt đầu theo dõi lô hàng</div>
+
+      <form id="signupForm">
+        <div class="login-field">
+          <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+          <input type="text" id="signupUser" placeholder="Tên đăng nhập" autocomplete="username">
+        </div>
+        <div class="login-field">
+          <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+          <input type="email" id="signupEmail" placeholder="Email liên hệ" autocomplete="email">
+        </div>
+        <div class="login-field">
+          <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          <input type="password" id="signupPass" placeholder="Mật khẩu" autocomplete="new-password">
+          <button type="button" class="toggle-eye" data-target="signupPass" aria-label="Hiện mật khẩu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <div class="login-field">
+          <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          <input type="password" id="signupPass2" placeholder="Nhập lại mật khẩu" autocomplete="new-password">
+          <button type="button" class="toggle-eye" data-target="signupPass2" aria-label="Hiện mật khẩu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+
+        <div class="login-error" id="signupError">—</div>
+
+        <button type="submit" class="login-btn">ĐĂNG KÝ</button>
+      </form>
+      <div class="login-signup">Đã có tài khoản? <a href="#" id="goLogin">Đăng nhập</a></div>
+    </div>
+
+    <!-- ============ OTP VERIFY PANEL ============ -->
+    <div id="otpPanel" class="auth-panel">
+      <div class="login-avatar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#9aa0ab" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+      </div>
+      <div class="login-title">Xác thực email</div>
+      <div class="login-sub" id="otpSubtext">Nhập mã OTP vừa gửi tới email của bạn</div>
+
+      <form id="otpForm">
+        <div class="login-field">
+          <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          <input type="text" id="otpInput" placeholder="Mã OTP (6 chữ số)" autocomplete="one-time-code" inputmode="numeric" maxlength="6">
+        </div>
+
+        <div class="login-error" id="otpError">—</div>
+
+        <button type="submit" class="login-btn" id="otpSubmitBtn">XÁC NHẬN</button>
+      </form>
+      <div class="login-signup">Không nhận được mã? <a href="#" id="resendOtp">Gửi lại</a></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="shell" id="appShell">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">
+        <div class="ring"></div>
+        <div class="ring r2"></div>
+        <div class="dot"></div>
+      </div>
+      <div>
+        <div class="brand-word">Tiền Trạm</div>
+        <div class="brand-sub">Biết trước sự cố, trước khi khách hàng phải hỏi</div>
+      </div>
+    </div>
+    <div class="topnav">
+      <a href="#" class="active" data-view="dashboard">Bảng điều khiển</a>
+      <a href="#" data-view="shipments">Lô hàng</a>
+      <a href="#" data-view="warehouse">Kho hàng</a>
+      <a href="#" data-view="vehicle">Quét xe</a>
+      <a href="#" data-view="xray">Soi hàng</a>
+      <a href="#" data-view="alerts">Cảnh báo</a>
+      <a href="#" data-view="insights">Báo cáo</a>
+    </div>
+    <div class="clockbox">
+      <div class="time mono" id="clockTime">--:--:--</div>
+      <div class="date" id="clockDate">—</div>
+      <a href="#" id="logoutBtn" class="logout-link">Đăng xuất</a>
+    </div>
+  </div>
+
+  <div class="view active" id="view-dashboard">
+
+  <div class="kpi-strip">
+    <div class="kpi">
+      <div class="num" id="kpiTotal" contenteditable="true" spellcheck="false" data-type="int" title="Nhấp để nhập số liệu">0</div>
+      <div class="label">Lô hàng đang vận chuyển</div>
+    </div>
+    <div class="kpi">
+      <div class="num warn" id="kpiRisk" contenteditable="true" spellcheck="false" data-type="int" title="Nhấp để nhập số liệu">0</div>
+      <div class="label">Có nguy cơ trễ / hỏng</div>
+    </div>
+    <div class="kpi">
+      <div class="num danger" id="kpiLate" contenteditable="true" spellcheck="false" data-type="int" title="Nhấp để nhập số liệu">0</div>
+      <div class="label">Đang trễ tiến độ</div>
+    </div>
+    <div class="kpi">
+      <div class="num safe" id="kpiOnTime" contenteditable="true" spellcheck="false" data-type="percent" title="Nhấp để nhập số liệu">0%</div>
+      <div class="label">Tỷ lệ đúng hẹn (30 ngày)</div>
+    </div>
+    <div class="kpi">
+      <div class="num" id="kpiIot" contenteditable="true" spellcheck="false" data-type="int" style="color:var(--amber)" title="Nhấp để nhập số liệu">0</div>
+      <div class="label">Lô hàng gắn cảm biến IoT (nhiệt độ/sốc)</div>
+    </div>
+  </div>
+
+  <div class="grid grid-single">
+
+    <!-- MAP PANEL -->
+    <div class="map-panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Luồng vận chuyển theo thời gian thực</div>
+          <div class="panel-hint">Kho trung tâm Bình Dương → 5 tuyến giao</div>
+        </div>
+        <button class="add-trip-btn" id="addTripBtn">+ Thêm chuyến</button>
+      </div>
+
+      <div class="map-wrap">
+        <div class="radar-sweep"></div>
+        <svg class="map-svg" viewBox="0 0 900 480" xmlns="http://www.w3.org/2000/svg">
+          <!-- routes -->
+          <path id="route-hn" class="route-line" d="M 120 250 C 380 250, 480 90, 770 80" />
+          <path id="route-hp" class="route-line" d="M 120 250 C 380 250, 500 160, 770 165" />
+          <path id="route-dn" class="route-line" d="M 120 250 C 380 250, 500 250, 770 255" />
+          <path id="route-ct" class="route-line" d="M 120 250 C 380 250, 500 340, 770 345" />
+          <path id="route-qn" class="route-line" d="M 120 250 C 380 250, 480 420, 770 425" />
+
+          <!-- origin -->
+          <g>
+            <circle cx="120" cy="250" r="6" fill="#e8a33d"/>
+            <circle cx="120" cy="250" r="11" fill="none" stroke="#e8a33d" stroke-width="1" opacity="0.4"/>
+            <text x="120" y="278" text-anchor="middle" class="node-label origin">Kho Bình Dương</text>
+          </g>
+
+          <!-- destinations -->
+          <g>
+            <circle cx="775" cy="80" r="4" fill="#586071"/>
+            <text x="790" y="84" class="node-label">Hà Nội</text>
+          </g>
+          <g>
+            <circle cx="775" cy="165" r="4" fill="#586071"/>
+            <text x="790" y="169" class="node-label">Hải Phòng</text>
+          </g>
+          <g>
+            <circle cx="775" cy="255" r="4" fill="#586071"/>
+            <text x="790" y="259" class="node-label">Đà Nẵng</text>
+          </g>
+          <g>
+            <circle cx="775" cy="345" r="4" fill="#586071"/>
+            <text x="790" y="349" class="node-label">Cần Thơ</text>
+          </g>
+          <g>
+            <circle cx="775" cy="425" r="4" fill="#586071"/>
+            <text x="790" y="429" class="node-label">Quy Nhơn</text>
+          </g>
+
+          <!-- shipment dots (JS will position some via offset-path animation, static risk ones placed directly) -->
+          <g id="shipmentLayer"></g>
+        </svg>
+      </div>
+
+      <div class="legend">
+        <div class="legend-item"><span class="legend-swatch" style="background:#4fb28a"></span>An toàn — đúng tiến độ</div>
+        <div class="legend-item"><span class="legend-swatch" style="background:#e8a33d"></span>Cảnh báo — theo dõi sát</div>
+        <div class="legend-item"><span class="legend-swatch" style="background:#e2574c"></span>Nguy cơ cao — cần xử lý</div>
+        <div class="legend-item"><span class="legend-swatch" style="background:#4fb28a; border:1px dashed #4fb28a; box-sizing:content-box;"></span>Chuyến tự thêm — chỉ GPS</div>
+        <div class="legend-item"><span class="legend-swatch" style="background:#e8a33d; border:1px dashed #e8a33d; box-sizing:content-box;"></span>Chuyến tự thêm — có cảm biến IoT</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="dash-preview-row">
+    <a href="#" class="dash-preview-card" data-jump="shipments">
+      <div class="dash-preview-head">
+        <span class="panel-title">Lô hàng</span>
+        <span class="dash-preview-link">Xem danh sách chuyến hàng →</span>
+      </div>
+      <div class="dash-preview-hint">Xem, thêm hoặc theo dõi cảm biến IoT của từng chuyến hàng tự nhập.</div>
+    </a>
+    <a href="#" class="dash-preview-card" data-jump="alerts">
+      <div class="dash-preview-head">
+        <span class="panel-title">Cảnh báo sớm</span>
+        <span class="dash-preview-link">Xem toàn bộ cảnh báo →</span>
+      </div>
+      <div class="dash-preview-hint" id="dashAlertPreviewHint">Đang tải cảnh báo gần nhất…</div>
+    </a>
+    <a href="#" class="dash-preview-card" data-jump="warehouse">
+      <div class="dash-preview-head">
+        <span class="panel-title">Kho hàng</span>
+        <span class="dash-preview-link">Xem mô phỏng quét IoT →</span>
+      </div>
+      <div class="dash-preview-hint">Cảm biến LiDAR/UWB quét toàn bộ mặt bằng kho trung tâm mỗi vòng để xác định vị trí và tình trạng hàng hóa.</div>
+    </a>
+    <a href="#" class="dash-preview-card" data-jump="vehicle">
+      <div class="dash-preview-head">
+        <span class="panel-title">Quét xe</span>
+        <span class="dash-preview-link">Xem mô phỏng quét khoang xe →</span>
+      </div>
+      <div class="dash-preview-hint">Quét bên trong khoang chứa hàng trên từng xe đang chạy để xác nhận số lượng và tình trạng cảm biến của pallet.</div>
+    </a>
+    <a href="#" class="dash-preview-card" data-jump="xray">
+      <div class="dash-preview-head">
+        <span class="panel-title">Soi hàng</span>
+        <span class="dash-preview-link">Xem mô phỏng soi kiện hàng →</span>
+      </div>
+      <div class="dash-preview-hint">Soi từng kiện hàng bằng quét mmWave để phát hiện nứt vỡ trước khi giao — quét mã vạch để điền nhanh thông tin.</div>
+    </a>
+  </div>
+
+  </div><!-- /view-dashboard -->
+
+  <!-- LÔ HÀNG VIEW -->
+  <div class="view" id="view-shipments">
+    <div class="shipments-panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Chuyến hàng đã thêm</div>
+          <div class="panel-hint">Các chuyến bạn tự nhập thêm sẽ hiển thị tại đây và lên bản đồ — nhấn vào một dòng có nhãn "Có IoT" để xem dữ liệu cảm biến chi tiết</div>
+        </div>
+        <button class="add-trip-btn" id="addTripBtn2">+ Thêm chuyến</button>
+      </div>
+      <div class="shipments-table" id="shipmentsTable">
+        <div class="strow sthead">
+          <div>Mã chuyến</div>
+          <div>Tuyến</div>
+          <div>Tài xế</div>
+          <div>Biển số xe</div>
+          <div>Loại hàng</div>
+          <div>SL</div>
+          <div>ETA</div>
+          <div>Cảm biến</div>
+          <div></div>
+        </div>
+        <div class="shipments-empty" id="shipmentsEmpty">Chưa có chuyến nào được thêm thủ công. Nhấn "+ Thêm chuyến" phía trên để nhập.</div>
+      </div>
+    </div>
+  </div><!-- /view-shipments -->
+
+  <!-- KHO HÀNG VIEW (mô phỏng quét IoT) -->
+  <div class="view" id="view-warehouse">
+
+    <div class="stat-row">
+      <div class="stat">
+        <div class="snum" id="whStatTotal">—</div>
+        <div class="slabel">Tổng vị trí trong kho</div>
+      </div>
+      <div class="stat">
+        <div class="snum" id="whStatOccupied">—</div>
+        <div class="slabel">Vị trí đã phát hiện hàng</div>
+      </div>
+      <div class="stat">
+        <div class="snum" id="whStatEmpty">—</div>
+        <div class="slabel">Vị trí còn trống</div>
+      </div>
+      <div class="stat">
+        <div class="snum" id="whStatAnomaly" style="color:var(--danger)">—</div>
+        <div class="slabel">Bất thường cần kiểm tra</div>
+      </div>
+      <div class="stat">
+        <div class="snum" id="whStatUsage">—</div>
+        <div class="slabel">Sức chứa đang sử dụng</div>
+      </div>
+    </div>
+
+    <div class="panel-hint" style="margin-top:16px;">Chọn kho để quét — mỗi kho có một cảm biến LiDAR/UWB gắn trần riêng, chỉ quét được kho đang chọn tại một thời điểm</div>
+    <div class="veh-chip-row" id="whChipRow"><!-- chips injected by JS --></div>
+
+    <div class="grid grid-single">
+      <div class="map-panel wh-panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title" id="whPanelTitle">Quét không gian kho —</div>
+            <div class="panel-hint" id="whPanelHint">Cảm biến LiDAR + thẻ UWB gắn trần quét toàn bộ kệ hàng mỗi vòng — xác định vị trí, số lượng và tình trạng cảm biến (nhiệt độ/va đập) của từng pallet</div>
+          </div>
+          <button class="simulate-btn" id="whRescanBtn">Quét lại ngay</button>
+        </div>
+
+        <div class="wh-status" style="margin-top:6px;">
+          <span class="wh-status-dot"></span>
+          <span id="whStatusText">Đang quét liên tục — vòng đầu tiên đang chạy…</span>
+        </div>
+
+        <div class="wh-floor-wrap">
+          <div class="wh-scanner"><div class="ring"></div><div class="dot"></div></div>
+          <div class="wh-beam" id="whBeam"></div>
+          <svg class="wh-svg" id="whSvg" viewBox="0 0 900 290" xmlns="http://www.w3.org/2000/svg"></svg>
+        </div>
+
+        <div class="wh-legend">
+          <div class="legend-item"><span class="legend-swatch" style="background:transparent; border:1px dashed #586071; box-sizing:content-box;"></span>Vị trí trống</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#4fb28a"></span>Có hàng — cảm biến bình thường</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#e2574c"></span>Có hàng — cảm biến báo bất thường</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="shipments-panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Nhật ký quét gần đây</div>
+          <div class="panel-hint">Ghi lại theo từng vòng quét của cảm biến — bất thường được ưu tiên hiển thị trước</div>
+        </div>
+      </div>
+      <div class="wh-log-list" id="whLogList">
+        <div class="wh-log-empty" id="whLogEmpty">Đang chờ vòng quét đầu tiên hoàn tất…</div>
+      </div>
+    </div>
+
+  </div><!-- /view-warehouse -->
+
+  <!-- QUÉT XE VIEW (mô phỏng quét IoT trong khoang xe) -->
+  <div class="view" id="view-vehicle">
+
+    <div class="stat-row">
+      <div class="stat">
+        <div class="snum" id="vehStatTotal">—</div>
+        <div class="slabel">Tổng vị trí trong khoang xe</div>
+      </div>
+      <div class="stat">
+        <div class="snum" id="vehStatOccupied">—</div>
+        <div class="slabel">Vị trí đã chất hàng</div>
+      </div>
+      <div class="stat">
+        <div class="snum" id="vehStatEmpty">—</div>
+        <div class="slabel">Vị trí còn trống</div>
+      </div>
+      <div class="stat">
+        <div class="snum" id="vehStatAnomaly" style="color:var(--danger)">—</div>
+        <div class="slabel">Bất thường cần kiểm tra</div>
+      </div>
+      <div class="stat">
+        <div class="snum" id="vehStatUsage">—</div>
+        <div class="slabel">Tải trọng không gian sử dụng</div>
+      </div>
+    </div>
+
+    <div class="panel-hint" style="margin-top:16px;">Chọn xe đang chạy để quét khoang chứa hàng — mỗi xe có một cảm biến LiDAR gắn trần khoang, chỉ quét được xe đang chọn tại một thời điểm</div>
+    <div class="veh-chip-row" id="vehChipRow"><!-- chips injected by JS --></div>
+
+    <div class="grid grid-single">
+      <div class="map-panel wh-panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title" id="vehPanelTitle">Quét khoang xe —</div>
+            <div class="panel-hint" id="vehPanelHint">Cảm biến LiDAR gắn trần khoang quét toàn bộ pallet mỗi vòng — xác định vị trí, số lượng và tình trạng cảm biến của hàng hóa trên xe</div>
+          </div>
+          <button class="simulate-btn" id="vehRescanBtn">Quét lại ngay</button>
+        </div>
+
+        <div class="wh-status" style="margin-top:6px;">
+          <span class="wh-status-dot"></span>
+          <span id="vehStatusText">Đang quét liên tục — vòng đầu tiên đang chạy…</span>
+        </div>
+
+        <div class="wh-floor-wrap">
+          <div class="wh-scanner"><div class="ring"></div><div class="dot"></div></div>
+          <div class="wh-beam" id="vehBeam"></div>
+          <svg class="wh-svg" id="vehSvg" viewBox="0 0 900 130" xmlns="http://www.w3.org/2000/svg"></svg>
+        </div>
+
+        <div class="wh-legend">
+          <div class="legend-item"><span class="legend-swatch" style="background:transparent; border:1px dashed #586071; box-sizing:content-box;"></span>Vị trí trống</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#4fb28a"></span>Có hàng — cảm biến bình thường</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#e2574c"></span>Có hàng — cảm biến báo bất thường</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="shipments-panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Nhật ký quét gần đây</div>
+          <div class="panel-hint">Ghi lại theo từng vòng quét của xe đang chọn — bất thường được ưu tiên hiển thị trước</div>
+        </div>
+      </div>
+      <div class="wh-log-list" id="vehLogList">
+        <div class="wh-log-empty" id="vehLogEmpty">Đang chờ vòng quét đầu tiên hoàn tất…</div>
+      </div>
+    </div>
+
+  </div><!-- /view-vehicle -->
+
+  <!-- SOI HÀNG VIEW (mô phỏng quét mmWave/point-cloud kiểm tra hư hỏng) -->
+  <div class="view" id="view-xray">
+
+    <div class="stat-row">
+      <div class="stat">
+        <div class="snum" id="xrayStatScanned">0</div>
+        <div class="slabel">Đã soi</div>
+      </div>
+      <div class="stat">
+        <div class="snum" id="xrayStatOk" style="color:var(--safe)">0</div>
+        <div class="slabel">Nguyên vẹn</div>
+      </div>
+      <div class="stat">
+        <div class="snum" id="xrayStatBad" style="color:var(--danger)">0</div>
+        <div class="slabel">Hư hỏng</div>
+      </div>
+      <div class="stat">
+        <div class="snum" id="xrayStatPending">0</div>
+        <div class="slabel">Đang chờ soi</div>
+      </div>
+    </div>
+
+    <div class="grid grid-single">
+      <div class="map-panel wh-panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Thêm kiện hàng cần soi</div>
+            <div class="panel-hint">Quét mã vạch để tự điền thông tin, hoặc nhập tay — sau đó bấm "Soi" trong danh sách chờ bên dưới</div>
+          </div>
+        </div>
+
+        <div class="xray-form-grid">
+          <div class="field-row" style="grid-column:1 / -1;">
+            <label for="xrayBarcode">Mã vạch</label>
+            <div class="barcode-row">
+              <input type="text" id="xrayBarcode" placeholder="Quét hoặc nhập mã vạch...">
+              <button type="button" class="barcode-scan-btn" id="xrayScanBarcodeBtn"><span class="bc-icon">▤</span> Quét mã vạch</button>
+            </div>
+          </div>
+          <div class="field-row">
+            <label for="xrayDesc">Tên / mô tả kiện hàng</label>
+            <input type="text" id="xrayDesc" placeholder="VD: Thùng gốm sứ men lam">
+          </div>
+          <div class="field-row">
+            <label for="xrayFragility">Độ dễ vỡ</label>
+            <select id="xrayFragility">
+              <option value="normal">Thường</option>
+              <option value="fragile">Dễ vỡ</option>
+              <option value="very-fragile">Rất dễ vỡ</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <label for="xrayShipment">Chuyến hàng</label>
+            <select id="xrayShipment"></select>
+          </div>
+          <div class="field-row">
+            <label for="xrayQty">Số lượng</label>
+            <input type="number" id="xrayQty" min="1" value="1">
+          </div>
+          <button type="button" class="xray-add-btn" id="xrayAddBtn">+ Thêm vào hàng chờ soi</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-2col" style="margin-top:20px;">
+      <div class="map-panel wh-panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Khay soi mmWave / point-cloud</div>
+            <div class="panel-hint" id="xrayBayHint">Chưa có kiện nào đang soi — bấm "Soi" trên một kiện trong danh sách chờ.</div>
+          </div>
+        </div>
+        <div class="xray-bay-wrap">
+          <svg class="xray-svg" id="xraySvg" viewBox="0 0 320 220" xmlns="http://www.w3.org/2000/svg"></svg>
+        </div>
+        <div class="xray-result" id="xrayResult"></div>
+        <div class="xray-result-sub" id="xrayResultSub"></div>
+      </div>
+
+      <div class="shipments-panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Hàng chờ soi</div>
+            <div class="panel-hint">Kiện nào chưa soi sẽ nằm ở đây, xếp hàng chờ đến lượt</div>
+          </div>
+        </div>
+        <div class="xray-pending-list" id="xrayPendingList">
+          <div class="wh-log-empty" id="xrayPendingEmpty">Chưa có kiện hàng nào trong danh sách chờ soi.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="shipments-panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Lịch sử soi hàng</div>
+          <div class="panel-hint">Kết quả từng lượt soi, kèm thời gian và vị trí hư hỏng nếu phát hiện</div>
+        </div>
+      </div>
+      <div class="wh-log-list" id="xrayLogList">
+        <div class="wh-log-empty" id="xrayLogEmpty">Chưa có lượt soi nào.</div>
+      </div>
+    </div>
+
+  </div><!-- /view-xray -->
+
+  <!-- CẢNH BÁO VIEW -->
+  <div class="view" id="view-alerts">
+    <div class="feed-panel feed-panel-full">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Cảnh báo sớm</div>
+          <div class="panel-hint">Toàn bộ cảnh báo đang mở, mới nhất trước</div>
+        </div>
+        <button class="simulate-btn" id="simBtn">Mô phỏng cảnh báo mới</button>
+      </div>
+
+      <div class="feed-list" id="feedList"><!-- rows injected by JS --></div>
+      <div class="feed-footer">Hệ thống quét lại rủi ro mỗi 5 phút dựa trên vị trí GPS, thời tiết, lịch sử tuyến đường — và dữ liệu cảm biến IoT (nhiệt độ, độ ẩm, va đập, cửa thùng) với các lô hàng có gắn thiết bị.</div>
+    </div>
+  </div><!-- /view-alerts -->
+
+  <div class="view" id="view-insights">
+
+    <div class="insight-hero">
+      <div class="insight-eyebrow mono">Vì sao Tiền Trạm tồn tại</div>
+      <h1>Sau khi hàng rời kho, phần lớn SME Việt Nam gần như mất hoàn toàn khả năng kiểm soát — cho đến khi tài xế báo cáo, hoặc khách hàng gọi điện phàn nàn.</h1>
+      <p>Gốc rễ vấn đề không phải thiếu xe hay thiếu kho, mà là thiếu một lớp hiển thị và cảnh báo rủi ro theo thời gian thực trong khâu vận chuyển — đặc biệt tại hai cụm kinh tế trọng điểm: phía Nam gồm TP.HCM – Bình Dương – Đồng Nai và hành lang cảng Cái Mép – Thị Vải; phía Bắc gồm Hà Nội – Hải Phòng – Bắc Ninh – Quảng Ninh, nơi hàng nhạy cảm (thực phẩm, dược phẩm) chịu rủi ro cao nhất do điện không ổn định và đội xe lạnh còn thiếu.</p>
+    </div>
+
+    <div class="insight-section">
+      <div class="panel-title">Hệ quả nếu vấn đề không được giải quyết</div>
+      <div class="panel-hint">Chi phí không biến mất — nó chỉ chuyển từ "phòng ngừa" sang "xử lý sự cố" mỗi ngày</div>
+      <div class="gap-panel">
+        <div class="gap-card limit">
+          <div class="gtitle mono">CHI PHÍ & VẬN HÀNH</div>
+          <ul>
+            <li>Chịu chi phí "ẩn" lặp lại: đền bù khách hàng, vận chuyển khẩn cấp để bù trễ, hàng hỏng không được xử lý kịp thời</li>
+            <li>Điều phối phụ thuộc hoàn toàn vào kinh nghiệm cá nhân của điều phối viên, không thể mở rộng quy mô khi khối lượng đơn hàng tăng</li>
+          </ul>
+        </div>
+        <div class="gap-card limit">
+          <div class="gtitle mono">KHÁCH HÀNG & CẠNH TRANH</div>
+          <ul>
+            <li>Trải nghiệm khách hàng suy giảm vì khách hàng luôn là người phát hiện sự cố đầu tiên, làm mất lòng tin và mất khách</li>
+            <li>SME tụt lại trong cuộc đua số hóa, khó đáp ứng chuẩn tích hợp chuỗi cung ứng của đối tác lớn/quốc tế, giảm khả năng cạnh tranh</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat">
+        <div class="snum">19%</div>
+        <div class="slabel">doanh nghiệp Việt Nam đang dùng hệ thống quản lý vận tải (TMS)</div>
+      </div>
+      <div class="stat">
+        <div class="snum">29%</div>
+        <div class="slabel">có sử dụng GPS để theo dõi lô hàng — phần lớn còn lại vận hành gần như "mù"</div>
+      </div>
+      <div class="stat">
+        <div class="snum">$31,1B → $42,8B</div>
+        <div class="slabel">quy mô thị trường logistics Việt Nam, từ 2025 đến dự kiến 2034</div>
+      </div>
+      <div class="stat">
+        <div class="snum">8,57%</div>
+        <div class="slabel">CAGR mảng tự động hóa logistics đến 2034, khởi điểm 358,9 triệu USD năm 2025</div>
+      </div>
+    </div>
+
+    <div class="insight-section">
+      <div class="panel-title">Chân dung khách hàng mục tiêu</div>
+      <div class="panel-hint">Chủ SME hoặc điều phối viên logistics — người chịu trách nhiệm khi sự cố xảy ra nhưng không có công cụ phát hiện sớm</div>
+      <div class="persona-panel">
+        <div class="persona-row">
+          <div class="pkey">VAI TRÒ</div>
+          <div class="pval">Chủ doanh nghiệp SME sản xuất/thương mại/TMĐT, hoặc quản lý/điều phối viên logistics vận hành nội bộ · 28–45 tuổi</div>
+        </div>
+        <div class="persona-row">
+          <div class="pkey">BỐI CẢNH</div>
+          <div class="pval">Quản lý kho vận, điều phối vận tải, COO tại doanh nghiệp 20–500 nhân sự; hoặc chủ shop TMĐT có lượng đơn trung bình–lớn, làm việc cùng lúc với nhiều đơn vị vận chuyển (3PL)</div>
+        </div>
+        <div class="persona-row">
+          <div class="pkey">HÀNH VI HIỆN TẠI</div>
+          <div class="pval">Điều phối qua điện thoại/Zalo với tài xế thay vì hệ thống tập trung; chỉ biết tình trạng đơn hàng khi tài xế chủ động báo hoặc khách hàng phàn nàn; xử lý sự cố theo phản xạ, không có dữ liệu cảnh báo trước</div>
+        </div>
+        <div class="persona-row">
+          <div class="pkey">NHU CẦU CỐT LÕI</div>
+          <div class="pval">Được cảnh báo trước khi lô hàng có nguy cơ trễ/hỏng — đủ sớm để còn kịp đổi tuyến, đổi xe, hoặc báo khách hàng chủ động; công cụ dễ dùng, không cần đội IT riêng, chi phí phù hợp quy mô SME</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="insight-section">
+      <div class="panel-title">Điểm đau & khó khăn cụ thể</div>
+      <div class="panel-hint">Ba điểm đau chính, cộng với các rào cản khiến khách hàng chưa tự giải quyết được</div>
+      <div class="gap-panel">
+        <div class="gap-card limit">
+          <div class="gtitle mono">PAIN POINT</div>
+          <ul>
+            <li>Mù thông tin sau khi hàng rời kho: không biết lô hàng đang ở đâu, có đang gặp vấn đề hay không cho đến khi có người báo</li>
+            <li>Luôn là người bị động — khách hàng thường là bên phát hiện sự cố đầu tiên, khiến doanh nghiệp mất thế chủ động</li>
+            <li>Không thể học từ sự cố cũ: các sự cố trễ/hỏng hàng không được ghi nhận, phân tích hệ thống nên cứ lặp lại</li>
+          </ul>
+        </div>
+        <div class="gap-card opp">
+          <div class="gtitle mono">RÀO CẢN HIỆN TẠI</div>
+          <ul>
+            <li>Thiếu ngân sách và nhân sự IT để triển khai hệ thống TMS/control tower bài bản như doanh nghiệp lớn</li>
+            <li>Với hàng đặc thù (thực phẩm, dược phẩm), còn thiếu đội xe lạnh và công nghệ giám sát nhiệt độ, khiến phát hiện sớm càng khó</li>
+            <li>Làm việc với nhiều 3PL/tài xế riêng lẻ, mỗi bên báo cáo một kiểu (điện thoại, tin nhắn, không báo), không có điểm dữ liệu tập trung</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="insight-section">
+      <div class="panel-title">Mô hình giám sát hai lớp: GPS + IoT</div>
+      <div class="panel-hint">GPS chỉ cho biết xe đang ở đâu và có khả năng trễ hay không — không cho biết tình trạng hàng bên trong. Muốn phát hiện hỏng hàng phải có cảm biến IoT.</div>
+      <div class="compare-grid">
+        <div class="compare-card">
+          <div class="cname">Gói cơ bản — chỉ GPS</div>
+          <div class="cdesc">Dự đoán nguy cơ trễ dựa trên vị trí xe theo thời gian thực, dữ liệu giao thông và thời tiết. Không cần lắp thêm phần cứng, chi phí thấp — phù hợp với phần lớn hàng khô, hàng thông thường.</div>
+        </div>
+        <div class="compare-card">
+          <div class="cname">Gói nâng cao — GPS + IoT</div>
+          <div class="cdesc">Bổ sung cảm biến nhiệt độ, độ ẩm, va đập và cảm biến mở cửa thùng, gắn trực tiếp trên thùng hàng hoặc container. Dành cho hàng nhạy cảm: thực phẩm, dược phẩm, hàng đông lạnh, hàng dễ vỡ — nơi "trễ" không phải rủi ro duy nhất, "hỏng" mới là rủi ro tốn kém nhất.</div>
+        </div>
+      </div>
+      <div class="gap-panel" style="margin-top:16px;">
+        <div class="gap-card opp">
+          <div class="gtitle mono">VÌ SAO TÁCH THÀNH 2 GÓI</div>
+          <ul>
+            <li>Không phải lô hàng nào cũng cần cảm biến IoT — tách gói giúp SME chỉ trả tiền phần cứng cho đúng nhóm hàng rủi ro cao</li>
+            <li>Có thể tích hợp cảm biến IoT giá rẻ có sẵn trên thị trường thay vì tự sản xuất, giảm vốn đầu tư ban đầu</li>
+            <li>Gói cơ bản vẫn giải quyết được phần lớn pain point về "trễ" mà không cần triển khai phần cứng — dễ bán, dễ dùng thử trước khi nâng cấp</li>
+          </ul>
+        </div>
+        <div class="gap-card limit">
+          <div class="gtitle mono">GIỚI HẠN CẦN LƯU Ý</div>
+          <ul>
+            <li>Gói cơ bản không phát hiện được hỏng hàng do nhiệt độ, va đập hay mở cửa trái phép — chỉ cảnh báo được nguy cơ trễ tiến độ</li>
+            <li>Gói nâng cao đòi hỏi lắp đặt phần cứng vật lý trên xe/thùng hàng, cần thời gian triển khai và bảo trì thiết bị</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="insight-section">
+      <div class="panel-title">Bối cảnh cạnh tranh</div>
+      <div class="panel-hint">Các giải pháp hiện có giải quyết tốt khâu quản lý vận tải/kho, nhưng chưa có lớp cảnh báo rủi ro chủ động trước khi sự cố xảy ra</div>
+      <div class="compare-grid">
+        <div class="compare-card">
+          <div class="cname">Smartlog (STM/SWM)</div>
+          <div class="cdesc">Nền tảng đám mây cho quản lý vận tải, quản lý kho và sàn giao dịch vận tải — hơn 50 công ty logistics và chủ hàng lớn đang dùng.</div>
+        </div>
+        <div class="compare-card">
+          <div class="cname">Abivin vRoute</div>
+          <div class="cdesc">Nền tảng phối hợp trung tâm, hiển thị dữ liệu vận tải và vị trí tồn kho, tích hợp tối ưu hóa tuyến đường để giảm giao hàng chậm trễ.</div>
+        </div>
+        <div class="compare-card">
+          <div class="cname">LOGIVAN</div>
+          <div class="cdesc">Kết nối trực tiếp chủ hàng với mạng lưới xe tải toàn quốc — tập trung vào tìm và đặt xe hơn là giám sát hành trình.</div>
+        </div>
+        <div class="compare-card">
+          <div class="cname">Nền tảng quốc tế (SAP, Blue Yonder, Cainiao...)</div>
+          <div class="cdesc">Công nghệ AI/dữ liệu lớn đã kiểm chứng ở quy mô toàn cầu, nhưng chi phí triển khai cao và đòi hỏi hạ tầng IT phức tạp — không phù hợp với nhóm SME hiện chỉ 19% dùng TMS.</div>
+        </div>
+      </div>
+      <div class="gap-panel" style="margin-top:16px;">
+        <div class="gap-card opp">
+          <div class="gtitle mono">ĐIỂM MẠNH CỦA THỊ TRƯỜNG HIỆN CÓ</div>
+          <ul>
+            <li>Các nền tảng nội địa (Smartlog, Abivin) đã có hệ sinh thái tương đối đầy đủ và tệp khách hàng lớn ổn định, chứng minh mô hình vận hành số là khả thi tại VN</li>
+            <li>Mô hình dịch vụ logistics tích hợp (4PL) và control tower số đang tăng trưởng nhanh khi nhà sản xuất muốn ít đầu mối nhà cung cấp hơn</li>
+            <li>Nền tảng quốc tế mang theo công nghệ AI/dữ liệu lớn đã kiểm chứng ở quy mô toàn cầu, là nguồn tham khảo công nghệ đáng tin cậy</li>
+          </ul>
+        </div>
+        <div class="gap-card limit">
+          <div class="gtitle mono">RÀO CẢN PHÁP LÝ</div>
+          <ul>
+            <li>Tỷ lệ sở hữu nước ngoài trong doanh nghiệp logistics tại Việt Nam bị giới hạn ở mức 49%, buộc doanh nghiệp quốc tế phải liên doanh với đối tác trong nước</li>
+            <li>Điều này tạo dư địa để giải pháp nội địa như Tiền Trạm phát triển nhanh hơn trước khi các tay chơi quốc tế có thể tự do gia nhập thị trường</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="insight-section">
+      <div class="panel-title">Khoảng trống thị trường</div>
+      <div class="gap-panel">
+        <div class="gap-card limit">
+          <div class="gtitle mono">CHƯA ĐƯỢC GIẢI QUYẾT</div>
+          <ul>
+            <li>Chưa có sản phẩm nào tại Việt Nam tập trung cảnh báo sớm 12–24h trước khi lô hàng có nguy cơ trễ/hỏng</li>
+            <li>Khối SME — chiếm đa số nhưng chỉ 19% có TMS — gần như chưa được phục vụ bởi giải pháp cảnh báo sớm với chi phí phù hợp</li>
+            <li>Thiếu một lớp trung lập kết nối dữ liệu từ nhiều 3PL/tài xế vào một điểm giám sát duy nhất, thay vì theo dõi rời rạc qua điện thoại</li>
+          </ul>
+        </div>
+        <div class="gap-card opp">
+          <div class="gtitle mono">CƠ HỘI CHO TIỀN TRẠM</div>
+          <ul>
+            <li>Doanh nghiệp logistics lớn tại Việt Nam đang chủ động ứng dụng AI vào vận hành trong năm 2026 — thị trường đã sẵn sàng đón nhận</li>
+            <li>Khách hàng ngày càng sẵn sàng trả thêm phí cho khả năng truy xuất nguồn gốc và độ tin cậy trong vận chuyển</li>
+            <li>Chiến lược logistics quốc gia 2026–2030 hướng tới giảm chi phí logistics còn 13–15% GDP — phần lớn chi phí này đến từ xử lý sự cố bị động</li>
+          </ul>
+        </div>
+      </div>
+      <div class="position-box">
+        <div class="plabel mono">ĐỊNH VỊ SẢN PHẨM</div>
+        <div class="pquote">Công cụ cảnh báo sớm sự cố vận chuyển, giá phải chăng, dành riêng cho SME — lấp đúng khoảng trống giữa nhóm chưa dùng công cụ gì (81% chưa có TMS) và nhóm dùng giải pháp enterprise đắt đỏ.</div>
+      </div>
+    </div>
+
+  </div><!-- /view-insights -->
+
+  <footer class="credit">
+    <span>Tiền Trạm — bản demo minh họa khái niệm sản phẩm, dữ liệu mô phỏng</span>
+    <span>Dành cho SME logistics tại Việt Nam</span>
+  </footer>
+
+</div>
+
+<div class="modal-overlay" id="tripModalOverlay">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-title">Thêm chuyến mới</div>
+      <button class="modal-close" id="tripModalClose">&times;</button>
+    </div>
+    <div class="modal-hint">Nhập thông tin chuyến hàng — chuyến sẽ xuất hiện trên bản đồ và trong danh sách bên dưới.</div>
+    <form id="tripForm">
+      <div class="field-row">
+        <label for="tripBarcode">Mã vạch</label>
+        <div class="barcode-row">
+          <input type="text" id="tripBarcode" placeholder="Quét hoặc nhập mã vạch...">
+          <button type="button" class="barcode-scan-btn" id="tripScanBarcodeBtn"><span class="bc-icon">▤</span> Quét mã vạch</button>
+        </div>
+      </div>
+      <div class="field-row">
+        <label for="tripId">Mã lô hàng</label>
+        <input type="text" id="tripId" placeholder="Để trống sẽ tự tạo mã (VD: LH-4900)">
+      </div>
+      <div class="field-row">
+        <label for="tripRoute">Tuyến giao</label>
+        <select id="tripRoute">
+          <option value="hn">Bình Dương → Hà Nội</option>
+          <option value="hp">Bình Dương → Hải Phòng</option>
+          <option value="dn">Bình Dương → Đà Nẵng</option>
+          <option value="ct">Bình Dương → Cần Thơ</option>
+          <option value="qn">Bình Dương → Quy Nhơn</option>
+          <option value="other">Tuyến khác...</option>
+        </select>
+      </div>
+      <div class="field-row" id="tripRouteOtherRow" style="display:none;">
+        <label for="tripRouteOther">Tên tuyến khác</label>
+        <input type="text" id="tripRouteOther" placeholder="VD: Bình Dương → Nha Trang">
+      </div>
+      <div class="field-pair">
+        <div class="field-row">
+          <label for="tripDriver">Tài xế</label>
+          <input type="text" id="tripDriver" placeholder="Nguyễn Văn A">
+        </div>
+        <div class="field-row">
+          <label for="tripPlate">Biển số xe</label>
+          <input type="text" id="tripPlate" placeholder="51D-123.xx">
+        </div>
+      </div>
+      <div class="field-row">
+        <label for="tripCargo">Loại hàng</label>
+        <input type="text" id="tripCargo" placeholder="VD: hàng khô, hàng đông lạnh...">
+      </div>
+      <div class="field-pair">
+        <div class="field-row">
+          <label for="tripEta">ETA dự kiến</label>
+          <input type="text" id="tripEta" placeholder="VD: 18:00 · 14/09">
+        </div>
+        <div class="field-row">
+          <label for="tripQty">Số lượng hàng</label>
+          <input type="number" id="tripQty" min="1" placeholder="VD: 24">
+        </div>
+      </div>
+      <div class="field-checkbox">
+        <input type="checkbox" id="tripIot" checked>
+        <div>
+          <div class="fc-text">Lô hàng có gắn cảm biến IoT (nhiệt độ / độ ẩm / va đập / cửa thùng)</div>
+          <div class="fc-hint">Mặc định bật cho mọi chuyến — GPS chỉ báo được trễ tiến độ, không biết được tình trạng hàng bên trong. Bỏ chọn nếu chuyến này chỉ theo dõi bằng GPS.</div>
+        </div>
+      </div>
+      <div class="field-error" id="tripFormError">Vui lòng nhập ít nhất tên tài xế và biển số xe.</div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="tripCancelBtn">Hủy</button>
+        <button type="submit" class="btn btn-primary">Lưu chuyến</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="tientram.js"></script>
+</body>
+</html>
